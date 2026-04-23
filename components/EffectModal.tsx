@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Star, X, Zap, FileText, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Star, X, Zap, FileText, Plus, Check } from 'lucide-react';
 import type { VersionEffect } from '@/lib/types';
-import { MODEL_GROUPS } from '@/lib/constants';
+import { AI_APPS, getCustomAIApps, saveCustomAIApp } from '@/lib/constants';
 
 interface Props {
   promptTitle: string;
@@ -21,13 +21,18 @@ export default function EffectModal({ promptTitle, ver, existingEffect, currentM
   const [outputContent, setOutputContent] = useState(existingEffect?.outputContent ?? '');
   const [notes, setNotes] = useState(existingEffect?.notes ?? '');
   const [modelUsed, setModelUsed] = useState(currentModel || '');
-  const [activeProvider, setActiveProvider] = useState<string | null>(() => {
-    if (!currentModel) return null;
-    const found = MODEL_GROUPS.find((g) => g.models.includes(currentModel));
-    return found?.provider ?? null;
-  });
-  const [showCustomModel, setShowCustomModel] = useState(false);
-  const [customModelName, setCustomModelName] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customApps, setCustomApps] = useState<string[]>([]);
+
+  useEffect(() => {
+    setCustomApps(getCustomAIApps());
+  }, []);
+
+  const allApps = useMemo(() => {
+    const builtIn = AI_APPS.map((a) => a.name);
+    return [...builtIn, ...customApps.filter((c) => !builtIn.includes(c))];
+  }, [customApps]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -37,15 +42,24 @@ export default function EffectModal({ promptTitle, ver, existingEffect, currentM
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  const addCustomApp = () => {
+    const name = customName.trim();
+    if (!name || allApps.includes(name)) return;
+    saveCustomAIApp(name);
+    setCustomApps((prev) => [...prev, name]);
+    setModelUsed(name);
+    setCustomName('');
+    setShowCustomInput(false);
+  };
+
   const handleSave = () => {
-    const finalModel = showCustomModel ? customModelName.trim() : modelUsed;
     onSave(
       {
         score: score || 3,
         outputContent: mode === 'full' ? outputContent : '',
         notes: mode === 'full' ? notes : '',
       },
-      finalModel || modelUsed,
+      modelUsed,
     );
   };
 
@@ -72,79 +86,68 @@ export default function EffectModal({ promptTitle, ver, existingEffect, currentM
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-          {/* AI Model Selection — Two-level */}
+          {/* AI App Selection */}
           <div>
             <label className="block text-sm font-medium text-ink-secondary mb-2.5">
-              使用的 AI 模型 <span className="text-red-400 text-xs">*</span>
+              使用的 AI 应用 <span className="text-red-400 text-xs">*</span>
             </label>
-            {/* Level 1: Provider */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {MODEL_GROUPS.map((g) => {
-                const isActive = activeProvider === g.provider && !showCustomModel;
+            <div className="flex flex-wrap gap-1.5">
+              {allApps.map((name) => {
+                const app = AI_APPS.find((a) => a.name === name);
+                const selected = modelUsed === name;
                 return (
                   <button
-                    key={g.provider}
-                    onClick={() => {
-                      setActiveProvider(isActive ? null : g.provider);
-                      setShowCustomModel(false);
-                    }}
+                    key={name}
+                    onClick={() => setModelUsed(selected ? '' : name)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      isActive
+                      selected
                         ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 shadow-sm'
                         : 'bg-surface-raised text-ink-secondary border border-edge hover:border-gray-300 dark:hover:border-gray-600 hover:bg-surface-inset'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-white dark:bg-gray-900' : g.color}`} />
-                    {g.provider}
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selected ? 'bg-white dark:bg-gray-900' : app?.color ?? 'bg-gray-400'}`} />
+                    {name}
+                    {selected && <Check size={12} strokeWidth={3} />}
                   </button>
                 );
               })}
-              <button
-                onClick={() => {
-                  setShowCustomModel(!showCustomModel);
-                  setActiveProvider(null);
-                  if (!showCustomModel) setModelUsed('');
-                }}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  showCustomModel
-                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 shadow-sm'
-                    : 'bg-surface-raised text-ink-secondary border border-edge border-dashed hover:border-gray-300 dark:hover:border-gray-600 hover:bg-surface-inset'
-                }`}
-              >
-                <Plus size={12} /> 其他
-              </button>
+              {!showCustomInput && (
+                <button
+                  onClick={() => setShowCustomInput(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer bg-surface-raised text-ink-secondary border border-edge border-dashed hover:border-gray-300 dark:hover:border-gray-600 hover:bg-surface-inset"
+                >
+                  <Plus size={12} /> 添加
+                </button>
+              )}
             </div>
-            {/* Level 2: Specific model under selected provider */}
-            {activeProvider && !showCustomModel && (() => {
-              const group = MODEL_GROUPS.find((g) => g.provider === activeProvider);
-              if (!group) return null;
-              return (
-                <div className="flex flex-wrap gap-1.5 pl-3 py-1 bg-surface-inset/50 rounded-lg ml-1.5">
-                  {group.models.map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setModelUsed(m)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        modelUsed === m
-                          ? `text-white shadow-sm ${group.color.replace('bg-', 'bg-')}`
-                          : 'bg-surface-inset text-ink-secondary hover:bg-surface-raised'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
-            {showCustomModel && (
-              <input
-                type="text"
-                value={customModelName}
-                onChange={(e) => setCustomModelName(e.target.value)}
-                placeholder="输入模型名称，如 Llama 3..."
-                className="mt-1 w-full px-4 py-2 border border-edge rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-ink-muted hover:border-gray-300 dark:hover:border-gray-600"
-                autoFocus
-              />
+            {showCustomInput && (
+              <div className="flex items-center gap-2 mt-2.5">
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="输入 AI 应用名称..."
+                  className="flex-1 px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors placeholder:text-ink-muted"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') addCustomApp();
+                    if (e.key === 'Escape') { setShowCustomInput(false); setCustomName(''); }
+                  }}
+                />
+                <button
+                  onClick={addCustomApp}
+                  disabled={!customName.trim()}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer hover:bg-blue-700 transition-colors"
+                >
+                  添加
+                </button>
+                <button
+                  onClick={() => { setShowCustomInput(false); setCustomName(''); }}
+                  className="text-xs text-ink-muted hover:text-ink-secondary cursor-pointer"
+                >
+                  取消
+                </button>
+              </div>
             )}
           </div>
 
@@ -234,9 +237,9 @@ export default function EffectModal({ promptTitle, ver, existingEffect, currentM
           </button>
           <button
             onClick={handleSave}
-            disabled={score === 0 || (!modelUsed && !showCustomModel) || (showCustomModel && !customModelName.trim())}
+            disabled={score === 0 || !modelUsed}
             className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm cursor-pointer ${
-              score > 0 && (modelUsed || (showCustomModel && customModelName.trim()))
+              score > 0 && modelUsed
                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20'
                 : 'bg-gray-200 dark:bg-gray-700 text-ink-muted cursor-not-allowed'
             }`}

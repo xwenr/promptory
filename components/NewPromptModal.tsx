@@ -24,14 +24,17 @@ interface Props {
   onOpenEffect: (promptId: string, ver: number) => void;
   onClose: () => void;
   onToast: (msg: string) => void;
+  initialContent?: string;
+  initialScene?: string;
+  initialClusters?: string[];
 }
 
-export default function NewPromptModal({ activeScene, allPrompts, onCreate, onOpenEffect, onClose, onToast }: Props) {
+export default function NewPromptModal({ activeScene, allPrompts, onCreate, onOpenEffect, onClose, onToast, initialContent, initialScene, initialClusters }: Props) {
   const [newTitle, setNewTitle] = useState('');
   const [newGoal, setNewGoal] = useState('');
-  const [modalScene, setModalScene] = useState(activeScene);
-  const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
-  const [newBody, setNewBody] = useState('');
+  const [modalScene, setModalScene] = useState(initialScene || activeScene);
+  const [selectedClusters, setSelectedClusters] = useState<string[]>(initialClusters || []);
+  const [newBody, setNewBody] = useState(initialContent || '');
   const [newNote, setNewNote] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);

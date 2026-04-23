@@ -22,7 +22,7 @@ const PROVIDERS = [
     color: 'bg-violet-500',
     letter: 'K',
     baseUrl: 'https://api.moonshot.cn/v1',
-    testModel: 'moonshot-v1-8k',
+    testModel: 'kimi-k2.6',
   },
   {
     id: 'gemini',

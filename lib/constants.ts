@@ -16,24 +16,43 @@ export const CLUSTERS_BY_SCENE: Record<string, string[]> = {
   other: ['内容创作', '文案优化', '翻译', '总结提炼', '其他'],
 };
 
-export interface ModelGroup {
-  provider: string;
+export interface AIApp {
+  name: string;
   color: string;
-  models: string[];
 }
 
-export const MODEL_GROUPS: ModelGroup[] = [
-  { provider: 'Kimi', color: 'bg-blue-500', models: ['Kimi K2', 'Kimi K1.5'] },
-  { provider: 'OpenAI', color: 'bg-emerald-500', models: ['GPT-4o', 'GPT-o3', 'GPT-o4-mini'] },
-  { provider: 'Anthropic', color: 'bg-amber-500', models: ['Claude 4 Sonnet', 'Claude 3.7 Sonnet', 'Claude 3.5 Haiku'] },
-  { provider: 'Google', color: 'bg-sky-500', models: ['Gemini 2.5 Pro', 'Gemini 2.0 Flash'] },
-  { provider: 'DeepSeek', color: 'bg-violet-500', models: ['DeepSeek V3', 'DeepSeek R1'] },
-  { provider: 'xAI', color: 'bg-rose-500', models: ['Grok 3'] },
+export const AI_APPS: AIApp[] = [
+  { name: 'ChatGPT', color: 'bg-emerald-500' },
+  { name: 'Claude', color: 'bg-amber-500' },
+  { name: 'Gemini', color: 'bg-sky-500' },
+  { name: 'Kimi', color: 'bg-blue-500' },
+  { name: 'DeepSeek', color: 'bg-violet-500' },
+  { name: 'Grok', color: 'bg-rose-500' },
+  { name: 'Copilot', color: 'bg-teal-500' },
+  { name: 'Cursor', color: 'bg-gray-500' },
 ];
 
-export const MODELS: { name: string; color: string }[] = MODEL_GROUPS.flatMap((g) =>
-  g.models.map((m) => ({ name: m, color: g.color })),
-);
+const CUSTOM_APPS_KEY = 'promptory-custom-ai-apps';
+
+export function getCustomAIApps(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_APPS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomAIApp(name: string): void {
+  const existing = getCustomAIApps();
+  if (!existing.includes(name)) {
+    localStorage.setItem(CUSTOM_APPS_KEY, JSON.stringify([...existing, name]));
+  }
+}
+
+export function getAIAppColor(name: string): string {
+  return AI_APPS.find((a) => a.name === name)?.color ?? 'bg-gray-400';
+}
 
 export const GOAL_PLACEHOLDERS: Record<string, string> = {
   coding: '例：用 React + Tailwind 生成现代风 SaaS 登录页',

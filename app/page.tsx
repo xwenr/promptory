@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   Code2, GraduationCap, Briefcase, Search, Plus,
@@ -8,7 +8,7 @@ import {
   ChevronUp, ChevronDown, ChevronRight, X, Loader2, ArrowUpDown,
 } from 'lucide-react';
 import { usePromptStore } from '@/hooks/usePromptStore';
-import { CLUSTERS_BY_SCENE, MODEL_GROUPS, formatDate, formatDateTime } from '@/lib/constants';
+import { CLUSTERS_BY_SCENE, AI_APPS, getAIAppColor, formatDate, formatDateTime } from '@/lib/constants';
 import type { PromptRecord, ImportEntry } from '@/lib/types';
 import EffectModal from '@/components/EffectModal';
 import ImportWizard from '@/components/ImportWizard';
@@ -18,6 +18,22 @@ import HighlightEditor from '@/components/HighlightEditor';
 import ImageUpload from '@/components/ImageUpload';
 import Stars from '@/components/Stars';
 import { Trash2, ImagePlus } from 'lucide-react';
+
+interface InsightTemplateData {
+  content: string;
+  cluster: string;
+  scene: string;
+}
+
+interface ComposerOutputData {
+  content: string;
+  cluster: string;
+  scene: string;
+  templateName?: string;
+}
+
+const TEMPLATE_KEY = 'promptory-insight-template';
+const COMPOSER_OUTPUT_KEY = 'promptory-composer-output';
 
 const SCENE_LIST = [
   { id: 'pm', name: '产品经理', icon: Briefcase },
@@ -107,6 +123,41 @@ export default function Home() {
   const [newClusterNameEdit, setNewClusterNameEdit] = useState('');
   const [customClustersEdit, setCustomClustersEdit] = useState<string[]>([]);
   const [editNewImageFiles, setEditNewImageFiles] = useState<File[]>([]);
+  const [insightTemplate, setInsightTemplate] = useState<InsightTemplateData | null>(null);
+
+  const templateChecked = useRef(false);
+
+  useEffect(() => {
+    if (templateChecked.current) return;
+    templateChecked.current = true;
+
+    const composerRaw = sessionStorage.getItem(COMPOSER_OUTPUT_KEY);
+    if (composerRaw) {
+      sessionStorage.removeItem(COMPOSER_OUTPUT_KEY);
+      try {
+        const data: ComposerOutputData = JSON.parse(composerRaw);
+        setInsightTemplate({
+          content: data.content,
+          cluster: data.cluster,
+          scene: data.scene,
+        });
+        store.changeScene(data.scene);
+        store.setShowNewModal(true);
+        return;
+      } catch { /* ignore malformed data */ }
+    }
+
+    const raw = sessionStorage.getItem(TEMPLATE_KEY);
+    if (raw) {
+      sessionStorage.removeItem(TEMPLATE_KEY);
+      try {
+        const data: InsightTemplateData = JSON.parse(raw);
+        setInsightTemplate(data);
+        store.changeScene(data.scene);
+        store.setShowNewModal(true);
+      } catch { /* ignore malformed data */ }
+    }
+  }, [store]);
 
   useEffect(() => {
     if (!store.loading && store.allPrompts.length === 0 && !wizardDismissed && !store.showNewModal) {
@@ -534,7 +585,7 @@ export default function Home() {
               ) : (
                 <HighlightDisplay
                   content={cv.content}
-                  className="bg-[#F9FAFB] border border-gray-200/60 rounded-xl p-6 text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  className="bg-[#F9FAFB] border border-gray-200/60 rounded-xl p-6 text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap break-all font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] overflow-hidden"
                 />
               )}
             </div>
@@ -668,19 +719,12 @@ export default function Home() {
 
               <div className="flex-1 overflow-y-auto p-5 pb-20">
                 {/* Model indicator */}
-                {sp.modelUsed && sp.modelUsed !== '待选择' && (() => {
-                  const group = MODEL_GROUPS.find((g) => g.models.includes(sp.modelUsed));
-                  return (
-                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-gray-50 rounded-lg">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${group?.color ?? 'bg-gray-400'}`} />
-                      <span className="text-xs text-gray-500">
-                        {group?.provider && <span className="font-medium text-gray-700">{group.provider}</span>}
-                        {group?.provider && <span className="mx-1 text-gray-300">/</span>}
-                        <span className="text-gray-600">{sp.modelUsed}</span>
-                      </span>
-                    </div>
-                  );
-                })()}
+                {sp.modelUsed && sp.modelUsed !== '待选择' && (
+                  <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-gray-50 rounded-lg">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${getAIAppColor(sp.modelUsed)}`} />
+                    <span className="text-xs font-medium text-gray-700">{sp.modelUsed}</span>
+                  </div>
+                )}
                 {pv?.effect ? (
                   <>
                     <div className="text-xs text-gray-400 uppercase font-semibold tracking-wider mb-2">AI 输出记录</div>
@@ -861,8 +905,11 @@ export default function Home() {
           allPrompts={store.allPrompts}
           onCreate={store.createPrompt}
           onOpenEffect={store.openEffectModal}
-          onClose={() => store.setShowNewModal(false)}
+          onClose={() => { store.setShowNewModal(false); setInsightTemplate(null); }}
           onToast={showToast}
+          initialContent={insightTemplate?.content}
+          initialScene={insightTemplate?.scene}
+          initialClusters={insightTemplate ? [insightTemplate.cluster] : undefined}
         />
       )}
 

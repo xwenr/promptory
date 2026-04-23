@@ -12,6 +12,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const isAuthPage = pathname.startsWith('/auth');
+  const isImmersive = pathname.startsWith('/composer');
 
   useEffect(() => {
     if (!isSupabaseConfigured || loading) return;
@@ -43,7 +44,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#FAFAFA]">
-      <AppSidebar />
+      {!isImmersive && <AppSidebar />}
       <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
     </div>
   );

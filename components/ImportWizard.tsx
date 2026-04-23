@@ -8,7 +8,7 @@ import {
   ChevronDown, Trash2,
 } from 'lucide-react';
 import type { ImportEntry } from '@/lib/types';
-import { CLUSTERS_BY_SCENE, MODELS, SCENE_LABELS } from '@/lib/constants';
+import { CLUSTERS_BY_SCENE, AI_APPS, SCENE_LABELS } from '@/lib/constants';
 
 const SCENE_LIST = [
   { id: 'coding', name: 'Vibe Coding', icon: Code2 },
@@ -17,7 +17,7 @@ const SCENE_LIST = [
   { id: 'other', name: '其他', icon: MoreHorizontal },
 ];
 
-const MODEL_NAMES = MODELS.map((m) => m.name);
+const APP_NAMES = AI_APPS.map((a) => a.name);
 
 const TEMPLATE_TEXT = `---
 标题：生成响应式登录页
@@ -367,8 +367,8 @@ export default function ImportWizard({ onComplete, onSkip }: Props) {
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">模型</label>
                             <select value={entry.model} onChange={(e) => updateEntry(idx, { model: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white">
-                              {MODEL_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
-                              {!MODEL_NAMES.includes(entry.model) && <option value={entry.model}>{entry.model}</option>}
+                              {APP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+                              {!APP_NAMES.includes(entry.model) && <option value={entry.model}>{entry.model}</option>}
                             </select>
                           </div>
                         </div>

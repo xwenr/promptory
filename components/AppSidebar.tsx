@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Library, Sparkles, Settings, LogOut, KeyRound } from 'lucide-react';
+import { Library, Wand2, Sparkles, Settings, LogOut, KeyRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { isSupabaseConfigured, createClient } from '@/lib/supabase/client';
 
 const NAV_ITEMS = [
   { href: '/', icon: Library, label: 'Prompt 仓库' },
   { href: '/insight', icon: Sparkles, label: 'Insight 规律' },
+  { href: '/composer', icon: Wand2, label: 'Prompt 合成器' },
   { href: '/settings', icon: Settings, label: '设置' },
 ] as const;
 
